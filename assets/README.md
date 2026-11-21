@@ -10,6 +10,7 @@ What RSC carries besides its code: its logo and icons, the icons' font, the lice
 | `rsc.icns` | the icon of `RSC.app` under macOS |
 | `linux/rsc-<size>.png` | the Linux icons, 16 to 256 pixels, that `rsc.desktop` names |
 | `rsc.desktop` | RSC's entry in the Linux menus |
+| `linux/install.sh` | installs a Linux build for the user, with its menu entry and icon; `--uninstall` takes it away |
 | `make_icons.py` | draws `rsc.svg`, `rsc-256.png` and `rsc.ico` (Pillow needed) |
 | `make_platform_icons.py` | takes `linux/rsc-<size>.png` and `rsc.icns` from `rsc.ico`, with Python alone |
 | `fonts/` | the icons' font (Lucide), its licence and where it comes from |

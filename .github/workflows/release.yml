@@ -1,0 +1,152 @@
+# RSC's executables, built on each system and published with each version tag (v0.1.0), with their
+# SHA-256 and an attestation of where they were built. Run by hand (Run workflow), the archives are
+# built and kept with the run, and nothing is published.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: windows, os: windows-2025 }
+          - { name: macos, os: macos-15 }
+          - { name: linux, os: ubuntu-24.04 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Rust 1.100.0
+        shell: bash
+        run: |
+          rustup toolchain install 1.100.0 --profile minimal
+          rustup default 1.100.0
+
+      # A tag publishes the version of Cargo.toml, and no other.
+      - name: Version
+        id: version
+        shell: bash
+        run: |
+          version="$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n 1)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "The tag $GITHUB_REF_NAME is not v$version, the version of Cargo.toml." >&2
+            exit 1
+          fi
+
+      - name: Windows archive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          .\build.ps1
+          $dir = "rsc-$env:VERSION-windows-x86_64"
+          New-Item -ItemType Directory -Path "dist\$dir" | Out-Null
+          Copy-Item build\rsc.exe, LICENSE, assets\licences\THIRD-PARTY-LICENSES.txt "dist\$dir"
+          Compress-Archive -Path "dist\$dir" -DestinationPath "dist\$dir.zip"
+
+      - name: macOS archive
+        if: runner.os == 'macOS'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          ./build.sh
+          codesign --verify --deep --strict build/macos/RSC.app
+          dir="rsc-$VERSION-macos-arm64"
+          mkdir -p "dist/$dir"
+          cp -R build/macos/RSC.app LICENSE assets/licences/THIRD-PARTY-LICENSES.txt "dist/$dir/"
+          (cd dist && ditto -c -k --keepParent "$dir" "$dir.zip")
+
+      # For glibc 2.31 and later, as build.sh does it, with zig.
+      - name: Zig and cargo-zigbuild
+        if: runner.os == 'Linux'
+        run: |
+          python3 -m venv "$RUNNER_TEMP/zig"
+          "$RUNNER_TEMP/zig/bin/pip" install ziglang==0.17.1
+          echo "ZIG=$("$RUNNER_TEMP/zig/bin/python" -c 'import pathlib, ziglang; print(pathlib.Path(ziglang.__file__).parent / "zig")')" >> "$GITHUB_ENV"
+          cargo install cargo-zigbuild --version 0.24.1 --locked
+          rustup target add aarch64-unknown-linux-gnu
+
+      - name: Linux archives
+        if: runner.os == 'Linux'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          ./build.sh --linux-x86
+          ./build.sh --linux-arm64
+          for arch in x86_64 arm64; do
+            case "$arch" in
+              x86_64) from=build/linux-x86 ;;
+              arm64) from=build/linux-arm64 ;;
+            esac
+            dir="rsc-$VERSION-linux-$arch"
+            mkdir -p "dist/$dir/icons"
+            cp "$from/rsc" assets/rsc.desktop assets/linux/install.sh LICENSE assets/licences/THIRD-PARTY-LICENSES.txt "dist/$dir/"
+            cp assets/linux/rsc-*.png "dist/$dir/icons/"
+            tar -C dist -czf "dist/$dir.tar.gz" "$dir"
+          done
+
+      # What a user runs once extracted: everything in place, then taken away again.
+      - name: install.sh on the x86_64 archive
+        if: runner.os == 'Linux'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          home="$(mktemp -d)"
+          HOME="$home" "dist/rsc-$VERSION-linux-x86_64/install.sh"
+          test -x "$home/.local/bin/rsc"
+          grep -qx "Exec=$home/.local/bin/rsc" "$home/.local/share/applications/rsc.desktop"
+          for size in 16 24 32 48 64 128 256; do test -f "$home/.local/share/icons/hicolor/${size}x${size}/apps/rsc.png"; done
+          HOME="$home" "dist/rsc-$VERSION-linux-x86_64/install.sh" --uninstall
+          test ! -e "$home/.local/bin/rsc"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rsc-${{ matrix.name }}
+          path: |
+            dist/*.zip
+            dist/*.tar.gz
+          if-no-files-found: error
+
+  release:
+    if: github.ref_type == 'tag'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: SHA-256 of each archive
+        run: |
+          cd dist
+          sha256sum rsc-* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      # Free: anyone can check an archive was built here, from this tag (gh attestation verify).
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: dist/rsc-*
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "RSC $GITHUB_REF_NAME" --verify-tag --generate-notes
