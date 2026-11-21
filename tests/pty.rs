@@ -83,24 +83,40 @@ fn bridge(a: &TTYPort, b: &TTYPort, stop: &Arc<AtomicBool>) -> Vec<std::thread::
         .collect()
 }
 
+/// What `setsid -c` does, for macOS, which has no `setsid`: a session of its own, the terminal on
+/// its input made the controlling one, then the program. Python comes with the command line tools
+/// that Rust needs there.
+const SESSION: &str = "import fcntl, os, sys, termios; os.setsid(); fcntl.ioctl(0, termios.TIOCSCTTY, 0); os.execvp(sys.argv[1], sys.argv[1:])";
+
 /// A program on a pseudo-terminal of its own, the controlling one of its session, in a folder of
 /// its own, with nothing of the user's: no rc file, no home, the prompt "$ ".
 fn run_on(path: &str, folder: &std::path::Path, script: &str) -> std::process::Child {
     let tty = || std::fs::OpenOptions::new().read(true).write(true).open(path).expect("the program's end");
-    std::process::Command::new("setsid")
-        .args(["-c", "sh", "-c", script])
+    let mut session = if cfg!(target_os = "linux") {
+        let mut command = std::process::Command::new("setsid");
+        command.arg("-c");
+        command
+    } else {
+        let mut command = std::process::Command::new("python3");
+        command.args(["-c", SESSION]);
+        command
+    };
+    session
+        .args(["sh", "-c", script])
         .env_clear()
         .env("PATH", "/usr/bin:/bin")
         .env("HOME", folder)
         .env("TERM", "xterm-256color")
         .env("LANG", "C.UTF-8")
         .env("PS1", "$ ")
+        // macOS's bash otherwise opens with a word on zsh.
+        .env("BASH_SILENCE_DEPRECATION_WARNING", "1")
         .current_dir(folder)
         .stdin(tty())
         .stdout(tty())
         .stderr(tty())
         .spawn()
-        .expect("setsid and sh")
+        .expect("a session and sh")
 }
 
 /// The terminal's screen fed by the tool's link, its answers sent back, until `done` holds of it.
@@ -133,7 +149,9 @@ fn a_shell_and_vi_run_on_the_terminal_screen() {
     let program_path = program_end.name().expect("its path");
     let stop = Arc::new(AtomicBool::new(false));
     let threads = bridge(&device, &program_master, &stop);
-    let mut shell = run_on(&program_path, &folder, "stty sane rows 24 cols 80; exec bash --norc --noprofile -i");
+    // The prompt given again to bash itself: macOS's sh is a bash, which drops PS1 from what it
+    // hands on.
+    let mut shell = run_on(&program_path, &folder, "stty sane rows 24 cols 80; PS1='$ ' exec bash --norc --noprofile -i");
     drop(program_end);
 
     let link = Link::system(|| {});

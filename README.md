@@ -17,7 +17,7 @@ The window speaks French or English (Settings, Look). The Cargo package and the 
 | Windows 11, x86-64 | **tested**: test suite, the real window driven through Windows UI Automation (`window-check.ps1`), a real ESP-IDF board, an Arduino Leonardo running RSC's test program (`tests/arduino.rs`, `device-check.ps1`), measures, installation. Not yet heard with a real screen reader |
 | Linux x86-64 | **tested**: test suite (with a real pseudo-terminal of the system, and a real bash and vi on the terminal screen), real window under WSLg. The title bar the window draws under a Wayland desktop (GNOME) is not checked. The portable build (`./build.sh --linux-x86`) closed at start 2 times out of 3 under WSLg's Wayland, cause not found; once open, it holds |
 | Linux arm64 | **built** (`./build.sh --linux-arm64`), never run |
-| macOS arm64 | **test suite** run on 21/11/2026, except the two tests of `tests/pty.rs`; `RSC.app` is written in `build.sh`, never built |
+| macOS arm64 | **test suite** run on 21/11/2026 (with a real pseudo-terminal of the system, and a real bash and vi on the terminal screen); `RSC.app` is written in `build.sh`, never built |
 
 ## Getting started
 

@@ -37,7 +37,7 @@ impl Ports for System {
             FlowControl::Software => serialport::FlowControl::Software,
             FlowControl::Hardware => serialport::FlowControl::Hardware,
         };
-        let mut opened = serialport::new(port, link.baud_rate)
+        let mut opened = serialport::new(port, opening_speed(port, link.baud_rate, cfg!(target_os = "macos")))
             .data_bits(data_bits)
             .parity(parity)
             .stop_bits(stop_bits)
@@ -55,8 +55,18 @@ impl Ports for System {
     }
 }
 
+/// The line speed a port opens with: the link's, but none for a pseudo-terminal of macOS
+/// (`/dev/ttys003`, the name `openpty` gives there). The `serialport` crate sets the speed there by
+/// an ioctl that a pseudo-terminal answers with ENOTTY, and skips it at 0: a pseudo-terminal has no
+/// line, hence no speed. A pseudo-terminal of Linux takes the speed, and so does a real port.
+fn opening_speed(port: &str, baud_rate: u32, macos: bool) -> u32 {
+    let pseudo_terminal = port.strip_prefix("/dev/ttys").is_some_and(|number| !number.is_empty() && number.bytes().all(|byte| byte.is_ascii_digit()));
+    if macos && pseudo_terminal { 0 } else { baud_rate }
+}
+
 struct Serial {
     port: Box<dyn serialport::SerialPort>,
+    /// The link's speed, even when the port opened without one: the time a write takes.
     baud_rate: u32,
 }
 
@@ -73,5 +83,21 @@ impl Transport for Serial {
         let written = io::Write::write_all(&mut self.port, bytes).and_then(|()| io::Write::flush(&mut self.port));
         self.port.set_timeout(READ_TIMEOUT)?;
         written
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::opening_speed;
+
+    #[test]
+    fn a_pseudo_terminal_of_macos_opens_without_a_line_speed() {
+        assert_eq!(opening_speed("/dev/ttys003", 115200, true), 0);
+        assert_eq!(opening_speed("/dev/cu.usbserial-0001", 115200, true), 115200, "a real port of macOS");
+        assert_eq!(opening_speed("/dev/tty.usbmodem1101", 921600, true), 921600, "the other name of a real port");
+        assert_eq!(opening_speed("/dev/ttysa", 9600, true), 9600, "not a number");
+        assert_eq!(opening_speed("/dev/ttys", 9600, true), 9600, "no number");
+        assert_eq!(opening_speed("/dev/ttys003", 115200, false), 115200, "elsewhere, the link's speed");
+        assert_eq!(opening_speed("/dev/pts/3", 115200, false), 115200, "a pseudo-terminal of Linux takes it");
     }
 }
