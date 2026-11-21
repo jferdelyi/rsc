@@ -1,0 +1,51 @@
+# Clippy with no warning, then the whole test suite, on the three systems RSC is made for.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+# A newer push on the same branch makes the run still going useless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: ${{ matrix.os }}
+    strategy:
+      # Each system tells its own result, even when another fails.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025, macos-15]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      # The Rust RSC is checked with on the developer's machine.
+      - name: Rust 1.100.0 and clippy
+        shell: bash
+        run: |
+          rustup toolchain install 1.100.0 --profile minimal --component clippy
+          rustup default 1.100.0
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+
+      - name: Clippy
+        run: cargo clippy --locked --all-targets
+
+      - name: Tests
+        run: cargo test --locked --no-fail-fast
