@@ -72,7 +72,7 @@ fn every_script_can_be_run_by_its_owner() {
 #[test]
 fn the_walk_finds_the_scripts_and_only_them() {
     let names: Vec<String> = the_scripts().into_iter().map(|(_, name)| name).collect();
-    for script in ["build.sh", "tests/terminal/record.sh", "assets/linux/install.sh", "tests/arduino/flash.sh"] {
+    for script in ["build.sh", "tests/terminal/record.sh", "assets/linux/install.sh", "tests/arduino/flash.sh", "measure.sh"] {
         assert!(names.iter().any(|name| name == script), "{script} not found among {names:?}");
     }
     // Rust's `#![...]` is no script, nor what is run through `python3 <script>`.
