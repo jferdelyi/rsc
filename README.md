@@ -2,6 +2,13 @@
 
 **The ultimate serial console for boards, sensors and modems.**
 
+[![CI](https://github.com/jferdelyi/rsc/actions/workflows/ci.yml/badge.svg)](https://github.com/jferdelyi/rsc/actions/workflows/ci.yml)
+![Licence: EPL-2.0](https://img.shields.io/badge/licence-EPL--2.0-blue)
+![Windows, Linux, macOS](https://img.shields.io/badge/platforms-Windows%20%C2%B7%20Linux%20%C2%B7%20macOS-informational)
+![Rust 1.100 or later](https://img.shields.io/badge/rust-1.100%2B-orange)
+
+![RSC showing a board's start-up log in colour, a line sent and its answer](docs/screenshots/console-dark.png)
+
 - **The link**: pick a port or a named device, set the link, read what the device sends (as coloured text or as hexadecimal) and send it lines or a file.
 - **The console**: copy it, export it, write it to a journal as it goes; see the measures as curves.
 - **The terminal mode**: the keys go to the device one by one, and its screen is drawn as a terminal draws it (a Linux shell and vi, the ESP-IDF console, U-Boot, menus).
@@ -9,6 +16,12 @@
 - **Profiles**: a library of named profiles, each with all its values, and a general profile for the rest. A USB device you name is found again on any port, with the profile you give it; a tab on another port keeps its own.
 
 The window speaks French or English (Settings, Look). The Cargo package and the executable are both named `rsc`. RSC opens no network connection.
+
+| Curves of the measures, in two charts | The terminal mode: a device's menu |
+|---|---|
+| ![The curves temp, hum and wind in two charts under the console](docs/screenshots/curves.png) | ![A device's setup menu in a frame, a line chosen, a strip of colours](docs/screenshots/terminal.png) |
+| **The profile pill: a profile per device** | **The light theme** |
+| ![The profile menu open on Board 3: General, ESP32 921600, GPS 9600, a new profile](docs/screenshots/profile-menu.png) | ![The console in the light theme](docs/screenshots/console-light.png) |
 
 ## Platforms
 
@@ -207,6 +220,7 @@ The last `cargo audit` (19/11/2026, 1 550 advisories) finds no known vulnerabili
 cargo clippy --all-targets      # no warning tolerated: lints in deny
 cargo test                      # the whole suite
 RSC_CAPTURES=1 cargo test captures                                    # the window, light and dark, in build/captures
+RSC_SCREENSHOTS=1 cargo test --lib readme_screenshots                 # this README's screenshots, in English, in docs/screenshots
 RSC_LICENCES=write cargo test --test licences write_the_record       # make the licence record again (under Linux)
 RSC_PORT=COM3 cargo test --test real_port -- --ignored --nocapture    # a real port: opens it, reads 3 s, closes it
 RSC_PORT=COM3 cargo test --lib real_device -- --ignored --nocapture   # the window on a copy of your settings: the current tab connects with its profile, reads 5 s, disconnects
@@ -296,6 +310,8 @@ cargo test --lib audit -- --ignored --nocapture --test-threads 1                
 | `assets/make_icons.py` | the logo, with Pillow: `rsc.svg`, `rsc-256.png` (the window's icon), `rsc.ico` (the executable's icon) |
 | `assets/make_platform_icons.py` | from `rsc.ico`: `linux/rsc-<size>.png` and `rsc.icns` (macOS) |
 | `assets/rsc.desktop` | RSC's entry in Linux menus, which `build.sh --install` puts in place |
+| `docs/screenshots/` | this README's screenshots, drawn by `readme_screenshots` (`src/ui/tests/by_hand.rs`) |
+| `.github/workflows/ci.yml` | the CI: clippy with no warning, then the test suite, on Windows, macOS and Linux |
 
 ## The logo
 

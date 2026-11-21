@@ -307,6 +307,138 @@ fn captures_of_about() {
     }
 }
 
+/// The README's screenshots, in English, into docs/screenshots when RSC_SCREENSHOTS is set: the
+/// console dark and light, the curves in two charts, the terminal mode, the profile pill's menu.
+/// Drawn at 2 pixels a point, for screens that have as many.
+#[test]
+fn readme_screenshots() {
+    if std::env::var_os("RSC_SCREENSHOTS").is_none() {
+        return;
+    }
+    let folder = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("docs").join("screenshots");
+    fs::create_dir_all(&folder).unwrap();
+    let gps = UsbId { vid: 0x067b, pid: 0x2303, serial: None };
+    // A board on COM23 named, with a profile of its own; a GPS beacon on COM7 with another.
+    let settings = |theme: settings::Theme, terminal: bool, plot: bool| {
+        let mut settings = on("COM23");
+        settings.theme = theme;
+        settings.language = settings::Language::English;
+        settings.general.timestamps = true;
+        settings.name_device(0, "Board 3", board()).unwrap();
+        settings.add_profile("ESP32 921600", None).unwrap();
+        settings.choose_profile(0, Some("ESP32 921600"));
+        settings.edit_tab_profile(0, |profile| {
+            profile.baud_rate = 921_600;
+            profile.line_ending = LineEnding::CrLf;
+            profile.font_size = 14.0;
+            profile.terminal = terminal;
+            profile.plot = plot;
+        });
+        settings.add_profile("GPS 9600", None).unwrap();
+        settings.set_profile(Some("GPS 9600"), Profile { baud_rate: 9600, ..settings.general.clone() });
+        settings.devices.push(settings::Device { name: "GPS beacon".into(), usb: gps.clone(), last_port: "COM7".into(), profile: Some("GPS 9600".into()) });
+        let beacon = settings.add_tab();
+        settings.choose_port(beacon, "COM7", Some(&gps));
+        settings.active = 0;
+        settings
+    };
+    let window = |settings: Settings, name: &str, height: f32, clock: fn() -> Time| {
+        let fake = FakePorts::default();
+        fake.0.lock().unwrap().listed = vec![
+            PortInfo { name: "COM23".into(), description: "CP2102N USB to UART Bridge Controller".into(), usb: Some(board()) },
+            PortInfo { name: "COM7".into(), description: "USB-Serial Controller".into(), usb: Some(gps.clone()) },
+        ];
+        let path = test_settings(&format!("screenshot-{name}"));
+        settings.save(&path).unwrap();
+        let link = fake.clone();
+        let mut harness = Harness::builder().wgpu().with_size(egui::vec2(1100.0, height)).with_pixels_per_point(2.0).build_eframe(move |cc| {
+            App::new(&cc.egui_ctx, Some(path.clone()), Machine::of(link.clone()), clock)
+        });
+        harness.get_by_label("Connect").click();
+        until(&mut harness, "connected", |app| app.sessions[0].is_open());
+        (harness, fake)
+    };
+    // The pointer out of the window, so that no arrow stands over a button, then the picture.
+    let shot = |harness: &mut Harness<'static, App>, file: &str| {
+        harness.event(egui::Event::PointerGone);
+        harness.run();
+        harness.render().unwrap().save(folder.join(file)).unwrap();
+    };
+    // A board starting.
+    let boot = |harness: &mut Harness<'static, App>, fake: &FakePorts| {
+        for line in [
+            "\x1b[0;32mI (312) boot: ESP-IDF v5.3 2nd stage bootloader\x1b[0m",
+            "\x1b[0;32mI (598) main: firmware 0.4.2, board rev D\x1b[0m",
+            "\x1b[0;32mI (640) sensor: SHT40 found at 0x44\x1b[0m",
+            "\x1b[0;32mI (721) wifi: connecting to the access point\x1b[0m",
+            "\x1b[0;33mW (847) wifi: no access point saved, retrying in 5 s\x1b[0m",
+            "\x1b[0;32mI (1204) mqtt: connected to the broker\x1b[0m",
+            "ready, type help",
+        ] {
+            fake.device_sends(format!("{line}\r\n").as_bytes());
+        }
+        until(harness, "boot lines", |app| console_text(app, 0).contains("type help"));
+    };
+    // The console: a board starting, then a line sent and its answer.
+    for (theme, name) in [(settings::Theme::Dark, "dark"), (settings::Theme::Light, "light")] {
+        let (mut harness, fake) = window(settings(theme, false, false), &format!("console-{name}"), 640.0, clock);
+        boot(&mut harness, &fake);
+        harness.state_mut().sessions[0].input = "read sensors".into();
+        harness.get_by_label("Send").click();
+        until(&mut harness, "the line sent", |app| console_text(app, 0).contains("read sensors"));
+        fake.device_sends("temp 21.6 °C · hum 44 % · 1013.2 hPa\r\n".as_bytes());
+        fake.device_sends(b"\x1b[0;31mE (22410) i2c: timeout on 0x44\x1b[0m\r\n");
+        until(&mut harness, "answer", |app| console_text(app, 0).contains("timeout on 0x44"));
+        shot(&mut harness, &format!("console-{name}.png"));
+    }
+    // The curves: two charts, hum and wind below on their own scale, along the numbers of the
+    // measures, the curves taking most of a taller window: each chart has the room of its whole
+    // scale.
+    let (mut harness, fake) = window(settings(settings::Theme::Dark, false, true), "curves", 820.0, running_clock);
+    for n in 0..160_usize {
+        let x = n as f64 / 8.0;
+        let line = format!("temp={:.2} hum={:.2} wind={:.2}\r\n", 21.0 + x.sin(), 45.0 + 12.0 * (x / 2.0).cos(), 20.0 + 10.0 * (x / 5.0 + 1.0).sin());
+        fake.device_sends(line.as_bytes());
+        until(&mut harness, "measure", |app| app.sessions[0].plot.curves().first().is_some_and(|curve| curve.points().len() == n + 1));
+    }
+    harness.state_mut().settings.edit_tab_profile(0, |profile| {
+        profile.plot_below = vec!["hum".into(), "wind".into()];
+        profile.plot_x = XAxis::Number;
+    });
+    harness.state_mut().sessions[0].plot_view.span = plot_view::Span::All;
+    harness.state_mut().sessions[0].plot_share = 0.75;
+    shot(&mut harness, "curves.png");
+    // The terminal mode: a device's menu on the alternate screen, in a frame of DEC's set, the line
+    // chosen in reverse, and a strip of direct colours.
+    let (mut harness, fake) = window(settings(settings::Theme::Dark, true, false), "terminal", 640.0, clock);
+    let mut drawing = String::from("\x1b[?1049h\x1b[2J\x1b[1;1H\x1b[44;97m Board 3 · setup \x1b[K\x1b[0m");
+    let items = ["Link        921600 8N1", "Wi-Fi       office-2g", "Sensors     SHT40, BMP280", "Log level   info", "Firmware    0.4.2", "Restart"];
+    let (top, left, width) = (4, 6, 40);
+    drawing += &format!("\x1b[{top};{left}H\x1b(0l{}k\x1b(B", "q".repeat(width - 2));
+    for (row, item) in items.iter().enumerate() {
+        let chosen = if row == 2 { "\x1b[7m" } else { "" };
+        drawing += &format!("\x1b[{};{left}H\x1b(0x\x1b(B {chosen}{item:<w$}\x1b[0m \x1b(0x\x1b(B", top + 1 + row, w = width - 4);
+    }
+    drawing += &format!("\x1b[{};{left}H\x1b(0m{}j\x1b(B", top + 1 + items.len(), "q".repeat(width - 2));
+    drawing += &format!("\x1b[{};{left}H\x1b[2mUp and down to move, Enter to choose, Esc to leave\x1b[0m", top + 3 + items.len());
+    drawing += &format!("\x1b[{};{left}H", top + 5 + items.len());
+    for column in 0..60_u32 {
+        let (r, g, b) = (255 - column * 4, 60 + column * 3, column * 4);
+        drawing += &format!("\x1b[48;2;{r};{g};{b}m ");
+    }
+    // The cursor hidden, as a menu does.
+    drawing += "\x1b[0m\x1b[?25l";
+    fake.device_sends(drawing.as_bytes());
+    until(&mut harness, "drawn", |app| screen(app).contains("Log level"));
+    shot(&mut harness, "terminal.png");
+    // The profile pill's menu, on the named board.
+    let (mut harness, fake) = window(settings(settings::Theme::Dark, false, false), "pill", 640.0, clock);
+    boot(&mut harness, &fake);
+    harness.get_by_label("Profile ESP32 921600").click();
+    harness.run();
+    shot(&mut harness, "profile-menu.png");
+}
+
 /// A clock that runs, 25 ms at each look: the curves of the captures spread over time.
 fn running_clock() -> Time {
     static MILLIS: std::sync::atomic::AtomicI64 = std::sync::atomic::AtomicI64::new(0);
