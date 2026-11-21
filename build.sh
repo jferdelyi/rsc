@@ -112,6 +112,9 @@ if [ "$system" = Darwin ]; then
 </dict>
 </plist>
 PLIST
+    # Signed ad hoc, which costs nothing: an application with no signature at all is said
+    # "damaged" once downloaded, one signed ad hoc comes from "an unidentified developer".
+    codesign --force --deep --sign - "$app"
     echo "-> $app"
     if "$run"; then open "$app"; fi
     exit 0

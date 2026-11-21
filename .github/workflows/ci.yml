@@ -26,7 +26,7 @@ jobs:
         os: [ubuntu-24.04, windows-2025, macos-15]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       # The Rust RSC is checked with on the developer's machine.
       - name: Rust 1.100.0 and clippy
@@ -35,7 +35,7 @@ jobs:
           rustup toolchain install 1.100.0 --profile minimal --component clippy
           rustup default 1.100.0
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry/index
