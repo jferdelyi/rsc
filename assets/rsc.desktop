@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=RSC
+GenericName=Serial console
+GenericName[fr]=Console série
+Comment=Rust Serial Console: talk to serial devices
+Comment[fr]=Rust Serial Console : dialoguer avec des périphériques série
+Exec=rsc
+Icon=rsc
+Terminal=false
+Categories=Development;Electronics;
+StartupWMClass=rsc

@@ -1,0 +1,6 @@
+# What is built: the executables, the captures, the measures and the audit's tables.
+/build/
+/target/
+.DS_Store
+# The words tests/vocabulary.rs keeps out, kept on the machine that checks them.
+/tests/banned.local

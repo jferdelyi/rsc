@@ -1,0 +1,62 @@
+# RSC (Rust Serial Console): its own root, its own Cargo.lock, no crate taken by path. The library
+# and the executable `rsc` share the package's name.
+[package]
+name = "rsc"
+version = "0.1.0"
+edition = "2024"
+description = "RSC, a desktop serial terminal: pick a port, set the link, read what the device sends as text or bytes, send it lines or files, name each device with what it changes of the general profile, several ports at once"
+# Eclipse Public License 2.0, with no Secondary License: LICENSE.
+license = "EPL-2.0"
+# Where its source code is: the window's "About" section and RSC's own notice say it.
+repository = "https://github.com/jferdelyi/rsc"
+
+# Its own root: it is not a member of any workspace.
+[workspace]
+
+[dependencies]
+# The local time of a line's timestamp.
+chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
+# The window, drawn with OpenGL (glow) rather than wgpu: 141 MB at rest instead of 348 on Windows,
+# and a program of 11.9 MB instead of 18.9 (measured on 17/11/2026). `persistence` keeps its size and
+# gives the user's data folder.
+eframe = { version = "0.36.2", default-features = false, features = ["persistence", "glow", "accesskit", "default_fonts", "links", "wayland", "x11"] }
+# The curves of the measures a device writes; 0.37 is the one made for egui 0.36.
+egui_plot = "0.37.0"
+# The system's file window. Under Linux through the XDG portal, with no GTK to build against.
+rfd = { version = "0.15.4", default-features = false, features = ["xdg-portal", "tokio"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+# Without libudev: nothing to install under Linux, the ports are still listed.
+serialport = { version = "4.10.1", default-features = false }
+# The screen of the terminal mode: what a device draws with escape sequences (cursor, erase, scroll
+# regions, the alternate screen of vi and less, 256 colours) and the rows scrolled off. MIT.
+vt100 = "0.18.1"
+
+# The icon and the file properties of the Windows executable (build.rs).
+[target.'cfg(windows)'.build-dependencies]
+winresource = "0.1.31"
+
+# Without eframe's default features, winit loses its own: under Wayland, the title bar the window draws
+# itself (GNOME offers none). Its default features, as before glow.
+[target.'cfg(target_os = "linux")'.dependencies]
+winit = { version = "0.30.13", default-features = false, features = ["rwh_06", "x11", "wayland", "wayland-dlopen", "wayland-csd-adwaita"] }
+
+[dev-dependencies]
+# The fonts' own tables, to check that every character of the window has its glyph.
+ab_glyph = "0.2.32"
+# The window driven without a screen, and drawn to a picture for the captures.
+egui_kittest = { version = "0.36.2", features = ["wgpu", "snapshot", "eframe"] }
+
+# No warnings: they are errors, for the compiler as for clippy.
+[lints.rust]
+warnings = "deny"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+
+# The whole program optimized at once: 10.1 MB instead of 11.9 under Windows (17/11/2026), for a
+# release rebuild of about a minute instead of a few seconds.
+[profile.release]
+strip = true
+lto = "fat"
+codegen-units = 1
