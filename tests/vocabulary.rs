@@ -154,17 +154,32 @@ fn no_text_of_the_window_says_equipment_nor_a_company_name() {
     assert!(said.is_empty(), "{} texts:\n{}", said.len(), said.join("\n"));
 }
 
+/// The pages a reader of the project reads: the README, the docs and the assets' README.
+fn pages() -> Vec<PathBuf> {
+    let mut pages = vec![root().join("README.md"), root().join("assets").join("README.md")];
+    for entry in fs::read_dir(root().join("docs")).expect("the docs") {
+        let path = entry.expect("an entry of the docs").path();
+        if path.extension().is_some_and(|extension| extension == "md") {
+            pages.push(path);
+        }
+    }
+    pages
+}
+
 #[test]
-fn the_readme_says_neither_equipment_nor_a_company_name() {
+fn the_readme_and_the_docs_say_neither_equipment_nor_a_company_name() {
     let list = banned();
-    let readme = fs::read_to_string(root().join("README.md")).expect("the README");
-    let said: Vec<String> = readme
-        .lines()
-        .enumerate()
-        .filter_map(|(index, line)| {
+    let pages = pages();
+    assert!(pages.iter().any(|page| page.ends_with("docs/guide.md")), "the user guide is read: {pages:?}");
+    let mut said = Vec::new();
+    for page in &pages {
+        let text = fs::read_to_string(page).unwrap_or_else(|error| panic!("{}: {error}", page.display()));
+        for (index, line) in text.lines().enumerate() {
             let words = banned_in(line, &list);
-            (!words.is_empty()).then(|| format!("README.md:{}: {words:?}", index + 1))
-        })
-        .collect();
+            if !words.is_empty() {
+                said.push(format!("{}:{}: {words:?}", page.strip_prefix(root()).unwrap_or(page).display(), index + 1));
+            }
+        }
+    }
     assert!(said.is_empty(), "{} lines:\n{}", said.len(), said.join("\n"));
 }
