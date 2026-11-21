@@ -307,7 +307,7 @@ cargo test --lib audit -- --ignored --nocapture --test-threads 1                
 | `tests/vocabulary.rs` | the window's texts (French and English) and the README: a generic tool, which says "device" and names no company |
 | `assets/fonts/` | the icons' font (Lucide 1.74.0), its licence and where it comes from |
 | `assets/licences/` | the licence record (`licences.json`, which the program carries), its text (`THIRD-PARTY-LICENSES.txt`), the standard texts and where they come from (`textes/`) |
-| `assets/make_icons.py` | the logo, with Pillow: `rsc.svg`, `rsc-256.png` (the window's icon), `rsc.ico` (the executable's icon) |
+| `assets/make_icons.py` | the logo, with Pillow: `rsc.svg`, `rsc-256.png` (the window's icon), `rsc.ico` (the executable's icon); see `assets/README.md` |
 | `assets/make_platform_icons.py` | from `rsc.ico`: `linux/rsc-<size>.png` and `rsc.icns` (macOS) |
 | `assets/rsc.desktop` | RSC's entry in Linux menus, which `build.sh --install` puts in place |
 | `docs/screenshots/` | this README's screenshots, drawn by `readme_screenshots` (`src/ui/tests/by_hand.rs`) |
@@ -315,10 +315,7 @@ cargo test --lib audit -- --ignored --nocapture --test-threads 1                
 
 ## The logo
 
-A serial connector drawn freehand, a little askew, with a signal over it.
-
-- `assets/make_icons.py` (Pillow) makes it in three styles from a single geometry: "hand" (a filled connector in a gradient), "neon" (a glowing outline on a night background) and "flat" (a white line on a gradient tile), RSC's.
-- `python make_icons.py` writes the style of `STYLE`; `python make_icons.py --preview <folder>` writes all three to compare them.
+A serial connector drawn freehand, a little askew, with a signal over it: how it and the icons are drawn is in [`assets/README.md`](assets/README.md).
 
 ## Licence
 
