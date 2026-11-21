@@ -1,0 +1,12 @@
+# Line endings: LF in the repository and in every working tree, Windows included, so that
+# include_str! reads the same text everywhere.
+* text=auto eol=lf
+# Kept byte for byte, never converted: the logo as it was drawn (CRLF), and the bytes real
+# programs wrote, which the terminal's tests replay.
+assets/rsc.svg -text
+tests/terminal/** -text
+# Binary files.
+*.png binary
+*.ico binary
+*.icns binary
+*.ttf binary
