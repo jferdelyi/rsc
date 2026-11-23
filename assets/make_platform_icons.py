@@ -1,10 +1,11 @@
-"""RSC's icon for Linux and macOS, taken from rsc.ico (which make_icons.py draws), with Python alone:
+"""RSC's icons for Linux, taken from rsc.ico (which make_icons.py draws), with Python alone:
 
     python make_platform_icons.py
 
 - linux/rsc-<size>.png, 16 to 256 pixels: the icons a .desktop file names (build.sh --install puts
-  them in ~/.local/share/icons/hicolor/<size>x<size>/apps/rsc.png);
-- rsc.icns: the icon of RSC.app under macOS, its images in PNG.
+  them in ~/.local/share/icons/hicolor/<size>x<size>/apps/rsc.png).
+
+The icon of RSC.app under macOS, rsc.icns, is drawn by make_icons.py on Apple's grid.
 
 Each image of rsc.ico is a PNG already: they are copied as they are, nothing is drawn again.
 """
@@ -14,8 +15,6 @@ from pathlib import Path
 
 HERE = Path(__file__).parent
 PNG = b"\x89PNG\r\n\x1a\n"
-# The types of an .icns image by its size; the @2x ones are the size above for a retina screen.
-ICNS_TYPES = {16: [b"icp4"], 32: [b"icp5", b"ic11"], 64: [b"icp6", b"ic12"], 128: [b"ic07"], 256: [b"ic08", b"ic13"]}
 
 
 def ico_images(path):
@@ -32,23 +31,13 @@ def ico_images(path):
     return images
 
 
-def icns(images):
-    """An .icns file holding the PNG images, by their size."""
-    entries = b""
-    for size, kinds in ICNS_TYPES.items():
-        for kind in kinds:
-            entries += kind + struct.pack(">I", 8 + len(images[size])) + images[size]
-    return b"icns" + struct.pack(">I", 8 + len(entries)) + entries
-
-
 def main():
     images = ico_images(HERE / "rsc.ico")
     folder = HERE / "linux"
     folder.mkdir(exist_ok=True)
     for size, image in sorted(images.items()):
         (folder / f"rsc-{size}.png").write_bytes(image)
-    (HERE / "rsc.icns").write_bytes(icns(images))
-    print(f"linux/rsc-{{{','.join(str(size) for size in sorted(images))}}}.png, rsc.icns")
+    print(f"linux/rsc-{{{','.join(str(size) for size in sorted(images))}}}.png")
 
 
 if __name__ == "__main__":

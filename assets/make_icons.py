@@ -2,11 +2,16 @@
 connector drawn by hand, a little crooked, its outline and a signal on it in white, on a tile in the
 signal's gradient, with a soft shadow.
 
+Under macOS, the same logo on Apple's grid: rsc.icns (the icon of RSC.app, 16 to 1024 pixels) and
+rsc-macos-512.png (the window's icon there, which the Dock shows while RSC runs).
+
     python make_icons.py
 
 Pillow is needed.
 """
 
+import struct
+from io import BytesIO
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter
@@ -33,6 +38,17 @@ WAVE_SHRINK = 0.7
 OUTLINE = 26
 WAVE_WIDTH = 24
 WHITE = "#FFFFFF"
+# macOS: Apple's grid, a tile of 824 pixels centred in a square of 1024, a soft black shadow under it.
+# Measured on Calendar's and Calculator's icons: the shadow at most 14 % opaque just under the tile,
+# fading out in about 11 pixels of 256, lower than the tile by about 2.5 of them.
+MACOS_SIDE = 1024
+MACOS_TILE = 824
+MACOS_SHADOW_DROP = 10
+MACOS_SHADOW_BLUR = 16
+MACOS_SHADOW_OPACITY = 0.2
+# The types of an .icns image by its size; the @2x ones are the size below on a retina screen.
+# icp6 is 48 pixels: Apple's iconutil reads it so, and brings a bigger image down to 48.
+ICNS_TYPES = {16: [b"icp4"], 32: [b"icp5", b"ic11"], 48: [b"icp6"], 64: [b"ic12"], 128: [b"ic07"], 256: [b"ic08", b"ic13"], 512: [b"ic09", b"ic14"], 1024: [b"ic10"]}
 
 
 def rgb(color):
@@ -160,6 +176,31 @@ def png():
     return image
 
 
+def macos(big):
+    """The logo on Apple's grid, MACOS_SIDE pixels: its tile brought to MACOS_TILE pixels and centred,
+    a soft shadow under it."""
+    tile = big.crop((16 * SCALE, 16 * SCALE, 496 * SCALE, 496 * SCALE)).resize((MACOS_TILE, MACOS_TILE), Image.LANCZOS)
+    at = (MACOS_SIDE - MACOS_TILE) // 2
+    mask = Image.new("L", (MACOS_SIDE, MACOS_SIDE), 0)
+    mask.paste(tile.getchannel("A"), (at, at + MACOS_SHADOW_DROP))
+    shadow = mask.filter(ImageFilter.GaussianBlur(MACOS_SHADOW_BLUR)).point(lambda v: round(v * MACOS_SHADOW_OPACITY))
+    image = Image.new("RGBA", (MACOS_SIDE, MACOS_SIDE), (0, 0, 0, 0))
+    image.putalpha(shadow)
+    image.alpha_composite(tile, (at, at))
+    return image
+
+
+def icns(image):
+    """An .icns file holding the image at each size of ICNS_TYPES, in PNG."""
+    entries = b""
+    for size, kinds in ICNS_TYPES.items():
+        data = BytesIO()
+        image.resize((size, size), Image.LANCZOS).save(data, format="PNG", optimize=True)
+        for kind in kinds:
+            entries += kind + struct.pack(">I", 8 + len(data.getvalue())) + data.getvalue()
+    return b"icns" + struct.pack(">I", 8 + len(entries)) + entries
+
+
 def main(folder=HERE):
     (folder / "rsc.svg").write_text(svg(), encoding="utf-8")
     big = png()
@@ -168,6 +209,10 @@ def main(folder=HERE):
     frames = [big.resize((n, n), Image.LANCZOS) for n in sizes]
     frames[-1].save(folder / "rsc.ico", sizes=[(n, n) for n in sizes], append_images=frames[:-1])
     print("rsc.svg, rsc-256.png, rsc.ico:", ", ".join(map(str, sizes)))
+    apple = macos(big)
+    (folder / "rsc.icns").write_bytes(icns(apple))
+    apple.resize((512, 512), Image.LANCZOS).save(folder / "rsc-macos-512.png", optimize=True)
+    print("rsc.icns:", ", ".join(map(str, ICNS_TYPES)), "; rsc-macos-512.png")
 
 
 if __name__ == "__main__":

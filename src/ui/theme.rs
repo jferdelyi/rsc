@@ -291,12 +291,17 @@ pub fn mix(from: Color32, to: Color32, how_far: f32) -> Color32 {
     Color32::from_rgb(channel(from.r(), to.r()), channel(from.g(), to.g()), channel(from.b(), to.b()))
 }
 
-/// RSC's logo, drawn by `assets/make_icons.py`.
-pub const LOGO: &[u8] = include_bytes!("../../assets/rsc-256.png");
+/// RSC's logo as the window's icon, drawn by `assets/make_icons.py`. Under macOS, the Dock shows it
+/// while RSC runs: there it is the logo on Apple's grid, with the margin every macOS icon keeps around
+/// its tile, as in `RSC.app`.
+#[cfg(not(target_os = "macos"))]
+const WINDOW_ICON: &[u8] = include_bytes!("../../assets/rsc-256.png");
+#[cfg(target_os = "macos")]
+const WINDOW_ICON: &[u8] = include_bytes!("../../assets/rsc-macos-512.png");
 
 /// The logo as the window's icon.
 pub fn icon() -> egui::IconData {
-    eframe::icon_data::from_png_bytes(LOGO).unwrap_or_default()
+    eframe::icon_data::from_png_bytes(WINDOW_ICON).unwrap_or_default()
 }
 
 /// The small mark of a state, in front of a tab, a status or a device: its shape tells the state as
@@ -343,5 +348,13 @@ mod tests {
                 assert!(distance(press) > distance(hover), "{fill:?}: pressed, further than hovered");
             }
         }
+    }
+
+    #[test]
+    fn the_window_icon_is_the_one_of_its_system() {
+        // Under macOS, the Dock shows the window's icon while RSC runs: there, the logo on Apple's grid.
+        let side = if cfg!(target_os = "macos") { 512 } else { 256 };
+        let icon = icon();
+        assert_eq!((icon.width, icon.height), (side, side));
     }
 }
