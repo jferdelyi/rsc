@@ -179,7 +179,7 @@ mod tests {
         assert!(include_str!("../Cargo.toml").contains("\nlicense = \"EPL-2.0\"\n"), "Cargo.toml says the same licence");
         let notice = own_notice();
         assert!(notice.contains(&format!("Copyright (c) {YEAR} {HOLDER}")) && notice.contains("SPDX-License-Identifier: EPL-2.0"), "{notice}");
-        assert!(notice.contains("The source code of RSC is at https://github.com/jferdelyi/rsc.\n"), "where its source is: {notice}");
+        assert!(notice.contains("The source code of RSC is at https://github.com/zetaSoftTeam/rsc.\n"), "where its source is: {notice}");
     }
 
     #[test]

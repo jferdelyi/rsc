@@ -33,7 +33,7 @@ RSC is built from its sources with Rust (1.100 or later).
 
 ## Releases
 
-A tag `v<version>`, the version of `Cargo.toml`, publishes a release: `.github/workflows/release.yml` builds RSC on each system, archives it with `LICENSE` and the components' notices, then publishes the archives with their SHA-256 (`SHA256SUMS.txt`) and an attestation of where they were built (`gh attestation verify <archive> --repo jferdelyi/rsc`). `RSC.app` is signed ad hoc, which costs nothing; the executables are not signed with a paid certificate. Run by hand (Run workflow, in the Actions tab), the same workflow builds the archives and keeps them with the run, without publishing anything.
+A tag `v<version>`, the version of `Cargo.toml`, publishes a release: `.github/workflows/release.yml` builds RSC on each system, archives it with `LICENSE` and the components' notices, then publishes the archives with their SHA-256 (`SHA256SUMS.txt`) and an attestation of where they were built (`gh attestation verify <archive> --repo zetaSoftTeam/rsc`). `RSC.app` is signed ad hoc, which costs nothing; the executables are not signed with a paid certificate. Run by hand (Run workflow, in the Actions tab), the same workflow builds the archives and keeps them with the run, without publishing anything.
 
 ```bash
 git tag v0.1.0

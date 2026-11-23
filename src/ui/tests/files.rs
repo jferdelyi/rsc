@@ -60,7 +60,7 @@ fn the_about_section_gives_rsc_s_own_licence() {
     harness.state_mut().window = Some(settings_window::Window::at(Section::About, None));
     harness.run();
     harness.get_by_label(&format!("© {} {} · Eclipse Public License 2.0 (EPL-2.0)", crate::licences::YEAR, crate::licences::HOLDER));
-    harness.get_by_label("Source : https://github.com/jferdelyi/rsc");
+    harness.get_by_label("Source : https://github.com/zetaSoftTeam/rsc");
     assert!(harness.query_by_label_contains("Exhibit A").is_none(), "folded at first");
     harness.get_by_label("Lire la licence de RSC").click();
     harness.run();

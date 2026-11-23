@@ -8,7 +8,7 @@ description = "RSC, a desktop serial terminal: pick a port, set the link, read w
 # Eclipse Public License 2.0, with no Secondary License: LICENSE.
 license = "EPL-2.0"
 # Where its source code is: the window's "About" section and RSC's own notice say it.
-repository = "https://github.com/jferdelyi/rsc"
+repository = "https://github.com/zetaSoftTeam/rsc"
 
 # Its own root: it is not a member of any workspace.
 [workspace]
