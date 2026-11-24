@@ -22,7 +22,7 @@ Take the archive of your system from the [latest release](https://github.com/zet
 | Linux, x86-64 | `rsc-<version>-linux-x86_64.tar.gz` | extract it and run `./install.sh`: RSC is in your menus |
 | Linux, arm64 (Raspberry Pi OS 64-bit) | `rsc-<version>-linux-arm64.tar.gz` | the same |
 
-RSC's executables are not signed with a paid certificate: the first time, Windows SmartScreen or [macOS](https://support.apple.com/guide/mac-help/mh40616/mac) may say their publisher is unknown. Each release publishes the SHA-256 of its archives (`SHA256SUMS.txt`) and an attestation that they were built here, from the tagged sources: `gh attestation verify <archive> --repo zetaSoftTeam/rsc`.
+RSC's executables are not signed with a paid certificate: the first time, Windows SmartScreen or [macOS](https://support.apple.com/guide/mac-help/mh40616/mac) may say their publisher is unknown. Each release publishes the SHA-256 of its archives (`SHA256SUMS.txt`) and an attestation that they were built here, from the tagged sources: `gh attestation verify <archive> --repo zetaSoftTeam/rsc`. For 0.1.0, built before the repository moved here: `--owner jferdelyi` in place of `--repo`.
 
 Under Linux, serial ports belong to a group: `sudo usermod -aG dialout $USER` (`uucp` on Arch), then log out and in again.
 
