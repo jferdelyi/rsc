@@ -45,9 +45,10 @@ git push origin v0.1.0
 ```bash
 cargo clippy --all-targets      # no warning tolerated: lints in deny
 cargo test                      # the whole suite
+cargo audit                     # the packages against the RustSec advisories: a vulnerability fails, an unmaintained package warns
 RSC_CAPTURES=1 cargo test captures                                    # the window, light and dark, in build/captures
 RSC_SCREENSHOTS=1 cargo test --lib readme_screenshots                 # the README's screenshots, in English, in docs/screenshots
-RSC_LICENCES=write cargo test --test licences write_the_record       # make the licence record again (under Linux)
+RSC_LICENCES=write cargo test --test licences write_the_record       # make the licence record again, for every system: run `cargo fetch` first
 RSC_PORT=COM3 cargo test --test real_port -- --ignored --nocapture    # a real port: opens it, reads 3 s, closes it
 RSC_PORT=COM3 cargo test --lib real_device -- --ignored --nocapture   # the window on a copy of your settings: the current tab connects with its profile, reads 5 s, disconnects
 RSC_ARDUINO=COM3 cargo test --test arduino -- --ignored --nocapture --test-threads=1  # an Arduino running the test program: console, size, menu, measures, throughput
@@ -168,7 +169,7 @@ The drawing handles only the visible lines, and the folding of long lines follow
 | `assets/` | the logo and icons, the Linux menu entry and `install.sh`, what draws them: see [`assets/README.md`](../assets/README.md) |
 | `docs/guide.md`, `docs/development.md` | the user guide, and this page |
 | `docs/screenshots/` | the README's screenshots, drawn by `readme_screenshots` (`src/ui/tests/by_hand.rs`) |
-| `.github/workflows/ci.yml` | the CI: clippy with no warning, then the test suite, on Windows, macOS and Linux |
+| `.github/workflows/ci.yml` | the CI: clippy with no warning, then the test suite, on Windows, macOS and Linux; and the packages against the RustSec advisories |
 | `.github/workflows/release.yml` | the release: the archives of each system, their SHA-256 and their attestation, on a version tag |
 
 ## Dependencies and licences
