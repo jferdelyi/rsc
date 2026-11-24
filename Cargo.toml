@@ -2,7 +2,7 @@
 # and the executable `rsc` share the package's name.
 [package]
 name = "rsc"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "RSC, a desktop serial terminal: pick a port, set the link, read what the device sends as text or bytes, send it lines or files, name each device with what it changes of the general profile, several ports at once"
 # Eclipse Public License 2.0, with no Secondary License: LICENSE.

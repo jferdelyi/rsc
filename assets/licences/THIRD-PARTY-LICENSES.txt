@@ -1,4 +1,4 @@
-RSC 0.1.0: third-party licences
+RSC 0.1.1: third-party licences
 
 RSC is made with the components below. Their licences ask that these notices go with
 every copy of the program. For each component: its licence as it declares it, where its
